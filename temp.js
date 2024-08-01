@@ -4,13 +4,30 @@ const endpoint = 'https://solana-mainnet.g.alchemy.com/v2/eGBnZGKunXRnGkq6Kkq5cK
 const solanaConnection = new solanaweb3.Connection(endpoint);
 // const solanaConnection = new solanaweb3.Connection(solanaweb3.clusterApiUrl('mainnet-beta'), 'confirmed');
 
+async function getSlotFromTimestamp(connection, timestamp) {
+    const currentSlot = await connection.getSlot();
+    const currentBlockTime = await connection.getBlockTime(currentSlot);
+
+    if (!currentBlockTime) {
+        throw new Error('Failed to fetch current block time.');
+    }
+    const timeDifference = currentBlockTime - timestamp;
+    const slotDifference = Math.floor(timeDifference / 0.4); // 0.4 seconds per slot
+    const estimatedSlot = currentSlot - slotDifference;
+    return estimatedSlot;
+}
+
+
 //@param address takes the address of the target contract for which the transactions are being monitored
+//@param endTx stores the transaction hash as a reference point for finding transactions before it
 //@param numTx stores the number of latest transactions that are checked
 //@dev getTransactions() is used to generate all data related to the searchAddress's transactions
 //@dev Currently, issues with accessing the toAddress && fromAddress correctly
-const getTransactions = async(address, endTx) => {
+const getTransactions = async(address, startTxTime, endTxTime) => {
     const pubKey = new solanaweb3.PublicKey(address);
-    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endTx});
+    const startSlot = await getSlotFromTimestamp(solanaConnection, startTxTime);
+    const endslot = await getSlotFromTimestamp(solanaConnection, endTxTime);
+    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endslot, until: startSlot});
     let signatureList = transactionList.map((transaction) => transaction.signature);
     let transactionDetails = await solanaConnection.getParsedTransactions(signatureList, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
 
@@ -43,4 +60,4 @@ const getTransactions = async(address, endTx) => {
     });
 }
 
-getTransactions(searchAddress, );
+getTransactions(searchAddress, 5);
