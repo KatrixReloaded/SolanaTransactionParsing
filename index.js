@@ -9,9 +9,9 @@ const solanaConnection = new solanaweb3.Connection(endpoint);
 //@param numTx stores the number of latest transactions that are checked
 //@dev getTransactions() is used to generate all data related to the searchAddress's transactions
 //@dev Currently, issues with accessing the toAddress && fromAddress correctly
-const getTransactions = async(address, startSlot, endSlot, numTx) => {
+const getTransactions = async(address, startSlot, endSlot) => {
     const pubKey = new solanaweb3.PublicKey(address);
-    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endSlot, until: startSlot, limit: numTx});
+    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endSlot, until: startSlot});
     let signatureList = transactionList.map((transaction) => transaction.signature);
     let transactionDetails = await solanaConnection.getParsedTransactions(signatureList, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
 
