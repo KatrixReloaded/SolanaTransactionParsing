@@ -5,12 +5,13 @@ const solanaConnection = new solanaweb3.Connection(endpoint);
 // const solanaConnection = new solanaweb3.Connection(solanaweb3.clusterApiUrl('mainnet-beta'), 'confirmed');
 
 //@param address takes the address of the target contract for which the transactions are being monitored
+//@param endTx stores the transaction hash as a reference point for finding transactions before it
 //@param numTx stores the number of latest transactions that are checked
 //@dev getTransactions() is used to generate all data related to the searchAddress's transactions
 //@dev Currently, issues with accessing the toAddress && fromAddress correctly
-const getTransactions = async(address, numTx) => {
+const getTransactions = async(address, startSlot, endSlot, numTx) => {
     const pubKey = new solanaweb3.PublicKey(address);
-    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {limit: numTx});
+    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endSlot, until: startSlot, limit: numTx});
     let signatureList = transactionList.map((transaction) => transaction.signature);
     let transactionDetails = await solanaConnection.getParsedTransactions(signatureList, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
 
