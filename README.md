@@ -17,7 +17,7 @@ node index
   
 ## Code  
   
-To get the transaction details of a particular address, paste the target public key in `searchAddress` variable.  
-When `getTransactions(address, int)` is called, the second parameter is to specify the number of transactions that you want to see.  
+If using index.js, `getTransactions(address, int, int)` sets a range of slots from which transactions are fetched for the contract address provided.  
+If using temp.js, `getTransactions(address, int, int)` sets a range of slots from a pair of timestamps passed as parameters for the contract address provided.  
   
 **Side-note:** Will prefer if a common endpoint is provided instead of my personal one. When using the `clusterApiUrl`, it reverts with an error saying `Error: 429 Too Many Requests`  
