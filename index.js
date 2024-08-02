@@ -5,8 +5,8 @@ const searchAddress = 'EXiThgdnnkqpj77sY3gZUzj2xAQPZv49v7jEYNeaDgs2';
 const solanaConnection = new solanaweb3.Connection(solanaweb3.clusterApiUrl('mainnet-beta'), 'confirmed');
 
 //@param address takes the address of the target contract for which the transactions are being monitored
-//@param endTx stores the transaction hash as a reference point for finding transactions before it
-//@param numTx stores the number of latest transactions that are checked
+//@param startSlot stores the oldest slot that you want to retrieve, the lower limit
+//@param endSlot stores the most recent slot that you want to retrieve, the upper limit
 //@dev getTransactions() is used to generate all data related to the searchAddress's transactions
 //@dev Currently, issues with accessing the toAddress && fromAddress correctly
 const getTransactionsBySlot = async(address, startSlot, endSlot) => {

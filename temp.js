@@ -21,7 +21,6 @@ async function getSlotFromTimestamp(connection, timestamp) {
 //@param address takes the address of the target contract for which the transactions are being monitored
 //@param startTxTime takes the oldest timestamp of slots you want
 //@param endTxTime takes the most recent timestamp
-//@param numTx stores the number of latest transactions that are checked
 //@dev getTransactions() is used to generate all data related to the searchAddress's transactions
 //@dev Currently, issues with accessing the toAddress && fromAddress correctly
 const getTransactionsByTime = async(address, startTxTime, endTxTime) => {
