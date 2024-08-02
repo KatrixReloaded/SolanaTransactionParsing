@@ -9,7 +9,9 @@ const solanaConnection = new solanaweb3.Connection(endpoint);
 //@param numTx stores the number of latest transactions that are checked
 //@dev getTransactions() is used to generate all data related to the searchAddress's transactions
 //@dev Currently, issues with accessing the toAddress && fromAddress correctly
-const getTransactions = async(address, startSlot, endSlot) => {
+const getTransactionsBySlot = async(address, startSlot, endSlot) => {
+    const TxDetails = [];
+    const TxDetailsList = [];
     const pubKey = new solanaweb3.PublicKey(address);
     let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endSlot, until: startSlot});
     let signatureList = transactionList.map((transaction) => transaction.signature);
@@ -25,10 +27,13 @@ const getTransactions = async(address, startSlot, endSlot) => {
         toAddress = message.accountKeys[1].pubkey.toBase58();
         let logs = transactionDetails[i].meta.logMessages;
         console.log(`Transaction No.: ${i+1}`);
+        TxDetails.push(`Transaction No.: ${i+1}`);
         console.log(`Signature: ${transaction.signature}`);
+        TxDetails.push(`Signature: ${transaction.signature}`);
         console.log(`From Address: ${fromAddress}`);
         console.log(`To Address: ${toAddress}`);
         console.log(`Time: ${date}`);
+        TxDetails.push(`Time: ${date}`);
         console.log(`Status: ${transaction.confirmationStatus}`);
         console.log();
         console.log("Instructions: ");
@@ -37,11 +42,17 @@ const getTransactions = async(address, startSlot, endSlot) => {
         });
         console.log();
         console.log(`Logs:`);
-        logs.forEach((log, i) => console.log(`Log ${i}: ${log}`));
+        logs.forEach((log, i) => {
+            console.log(`Log ${i}: ${log}`);
+            TxDetails.push(`Log ${i}: ${log}`);
+        });
         console.log("-".repeat(20));
         console.log();
         console.log();
+        TxDetailsList.push(TxDetails);
+        TxDetails = [];
     });
+    return TxDetailsList;
 }
 
 getTransactions(searchAddress, 5);
