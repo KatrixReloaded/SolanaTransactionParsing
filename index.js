@@ -21,10 +21,7 @@ const getTransactionsBySlot = async(address, startSlot, endSlot) => {
     // console.log("endSlotSig",endSlotSig);
 
     // let signatures = await solanaConnection.getSignaturesForAddress(pubKey, {before: endSlotSig, until: startSlotSig});
-    console.log(TxDetails);
-    let signatures = await getSigsInRange(address, startSlot, endSlot);
-    console.log();
-    console.log(signatures[0]);
+    let signatures = await getSigsInRange(address, endSlot, startSlot);
     let signatureMapping = signatures.map((transaction) => transaction.signature);
     let transactionDetails = await solanaConnection.getParsedTransactions(signatureMapping, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
 
@@ -38,6 +35,7 @@ const getTransactionsBySlot = async(address, startSlot, endSlot) => {
         toAddress = message.accountKeys[1].pubkey.toBase58();
 
         let logs = transactionDetails[i].meta.logMessages.filter(log => log.includes(searchAddress.toString()));
+        //transactionDetails[i].meta.logMessages.
 
         TxDetails.push(`Transaction No.: ${i+1}`);
         TxDetails.push(`Signature: ${transaction.signature}`);
@@ -95,20 +93,12 @@ const getSigsInRange = async(address, startSlot, endSlot) => {
             break;
         }
 
-        // Filter signatures within the slot range
         const filteredSignatures = fetchedSignatures.filter(sig => sig.slot >= endSlot && sig.slot <= startSlot);
         signatures = signatures.concat(filteredSignatures);
 
-        // Check if the last transaction's slot is before our endSlot
-        if (fetchedSignatures[fetchedSignatures.length - 1].slot < endSlot) {
-            break;
-        }
-
-        // Update the `beforeSignature` to the oldest fetched signature
         beforeSignature = fetchedSignatures[fetchedSignatures.length - 1].signature;
-
-        // If all filtered transactions are within the desired range, break the loop
-        if (filteredSignatures.length > 0 && filteredSignatures[filteredSignatures.length - 1].slot <= endSlot) {
+        
+        if (fetchedSignatures[fetchedSignatures.length - 1].slot <= endSlot) {
             break;
         }
     }
@@ -124,4 +114,4 @@ const getSigsInRange = async(address, startSlot, endSlot) => {
     // return await firstTransactionInSlot.signature;
 };
 
-getTransactionsBySlot(searchAddress, 281509000, 281509020);
+getTransactionsBySlot(searchAddress, 281850700, 281850800);
