@@ -27,13 +27,15 @@ const getTransactionsByTime = async(address, startTxTime, endTxTime) => {
     const TxDetails = [];
     const TxDetailsList = [];
     const pubKey = new solanaweb3.PublicKey(address);
-    const startSlot = await getSlotFromTimestamp(solanaConnection, startTxTime);
-    const endslot = await getSlotFromTimestamp(solanaConnection, endTxTime);
-    let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {before: endslot, until: startSlot});
-    let signatureList = transactionList.map((transaction) => transaction.signature);
-    let transactionDetails = await solanaConnection.getParsedTransactions(signatureList, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
 
-    transactionList.forEach((transaction, i) => {
+    const startSlot = await getSlotFromTimestamp(solanaConnection, startTxTime);
+    const endSlot = await getSlotFromTimestamp(solanaConnection, endTxTime);
+
+    let signatures = await getSigsInRange(address, endSlot, startSlot);
+    let signatureMapping = signatures.map((transaction) => transaction.signature);
+    let transactionDetails = await solanaConnection.getParsedTransactions(signatureMapping, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
+
+    signatures.forEach((transaction, i) => {
         const date = new Date(transaction.blockTime * 1000);
         const message = transactionDetails[i].transaction.message;
         const transactionInstructions = message.instructions;
@@ -41,34 +43,75 @@ const getTransactionsByTime = async(address, startTxTime, endTxTime) => {
         //i temp line to check whether potential to address is being accessed
         let toAddress;
         toAddress = message.accountKeys[1].pubkey.toBase58();
-        let logs = transactionDetails[i].meta.logMessages;
-        console.log(`Transaction No.: ${i+1}`);
+
+        let logs = transactionDetails[i].meta.logMessages.filter(log => log.includes(searchAddress.toString()));
+
         TxDetails.push(`Transaction No.: ${i+1}`);
-        console.log(`Signature: ${transaction.signature}`);
         TxDetails.push(`Signature: ${transaction.signature}`);
+        TxDetails.push(`Time: ${date}`);
+
+        console.log(`Transaction No.: ${i+1}`);
+        console.log(`Signature: ${transaction.signature}`);
         console.log(`From Address: ${fromAddress}`);
         console.log(`To Address: ${toAddress}`);
         console.log(`Time: ${date}`);
-        TxDetails.push(`Time: ${date}`);
         console.log(`Status: ${transaction.confirmationStatus}`);
         console.log();
+
         console.log("Instructions: ");
         transactionInstructions.forEach((instruction, n)=> {
             console.log(`---Program Instructions ${n+1}: ${instruction.program ? instruction.program + ":" : ""} ${instruction.programId.toString()}`);
         });
         console.log();
+
         console.log(`Logs:`);
         logs.forEach((log, i) => {
             console.log(`Log ${i}: ${log}`);
             TxDetails.push(`Log ${i}: ${log}`);
         });
+        
         console.log("-".repeat(20));
         console.log();
         console.log();
+
         TxDetailsList.push(TxDetails);
         TxDetails = [];
     });
     return TxDetailsList;
+}
+
+const getSigsInRange = async(address, startSlot, endSlot) => {
+    const pubKey = new solanaweb3.PublicKey(address);
+
+    let signatures = [];
+    let beforeSignature = null;
+
+    while (true) {
+        const options = {
+            limit: 1000,
+            before: beforeSignature
+        };
+        console.log(beforeSignature);
+        const fetchedSignatures = await solanaConnection.getSignaturesForAddress(
+            pubKey,
+            options
+        );
+
+        if (fetchedSignatures.length === 0) {
+            break;
+        }
+
+        const filteredSignatures = fetchedSignatures.filter(sig => sig.slot >= endSlot && sig.slot <= startSlot);
+        signatures = signatures.concat(filteredSignatures);
+
+        beforeSignature = fetchedSignatures[fetchedSignatures.length - 1].signature;
+        
+        if (fetchedSignatures[fetchedSignatures.length - 1].slot <= endSlot) {
+            break;
+        }
+    }
+
+    return signatures;
 }
 
 getTransactions(searchAddress, 5);
