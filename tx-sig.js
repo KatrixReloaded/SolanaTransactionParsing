@@ -15,7 +15,7 @@ const getTransactionsByTxSig = async(address, startTx, endTx) => {
     const TxDetailsList = [];
     const pubKey = new solanaweb3.PublicKey(address);
 
-    let signatures = await solanaConnection.getSignaturesForAddress(pubKey, {before: endTx, until: startTx});
+    let signatures = await solanaConnection.getSignaturesForAddress(pubKey, {before: endTx, until: startTx, limit: 1000});
 
     let signatureMapping = signatures.map((transaction) => transaction.signature);
     let transactionDetails = await solanaConnection.getParsedTransactions(signatureMapping, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
@@ -24,10 +24,6 @@ const getTransactionsByTxSig = async(address, startTx, endTx) => {
         const date = new Date(transaction.blockTime * 1000);
         const message = transactionDetails[i].transaction.message;
         const transactionInstructions = message.instructions;
-        const fromAddress = message.accountKeys[0].pubkey.toBase58();
-        //i temp line to check whether potential to address is being accessed
-        let toAddress;
-        toAddress = message.accountKeys[1].pubkey.toBase58();
 
         let logs = transactionDetails[i].meta.logMessages.filter(log => log.includes(searchAddress.toString()));
 
@@ -37,15 +33,27 @@ const getTransactionsByTxSig = async(address, startTx, endTx) => {
 
         console.log(`Transaction No.: ${i+1}`);
         console.log(`Signature: ${transaction.signature}`);
-        console.log(`From Address: ${fromAddress}`);
-        console.log(`To Address: ${toAddress}`);
         console.log(`Time: ${date}`);
         console.log(`Status: ${transaction.confirmationStatus}`);
         console.log();
 
         console.log("Instructions: ");
         transactionInstructions.forEach((instruction, n)=> {
-            console.log(`---Program Instructions ${n+1}: ${instruction.program ? instruction.program + ":" : ""} ${instruction.programId.toString()}`);
+            const parsedInstruction = instruction.parsed;
+            if (parsedInstruction && parsedInstruction.type === 'transfer') {
+                const fromAddress = parsedInstruction.info.source;
+                const toAddress = parsedInstruction.info.destination;
+                const amount = parsedInstruction.info.amount;
+
+                console.log(`Token Transfer: ${amount} tokens from ${fromAddress} to ${toAddress}`);
+            } 
+            else if (parsedInstruction && parsedInstruction.type === 'transferChecked') {
+                const fromAddress = parsedInstruction.info.source;
+                const toAddress = parsedInstruction.info.destination;
+                const amount = parsedInstruction.info.tokenAmount.uiAmount;
+
+                console.log(`Token TransferChecked: ${amount} tokens from ${fromAddress} to ${toAddress}`);
+            }
         });
         console.log();
 

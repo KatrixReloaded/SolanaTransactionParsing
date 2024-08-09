@@ -1,6 +1,6 @@
 const solanaweb3 = require('@solana/web3.js');
 const dotenv = require('dotenv').config();
-const searchAddress = '7LF8NQXQC5fdVXoY7nt7Z2FDd45TMMrQJaiSCWpQQgpM';
+const searchAddress = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 const endpoint = process.env.MAINNET_URL;
 const solanaConnection = new solanaweb3.Connection(endpoint);
 // const solanaConnection = new solanaweb3.Connection(solanaweb3.clusterApiUrl('mainnet-beta'), 'confirmed');
@@ -15,12 +15,6 @@ const getTransactionsBySlot = async(address, startSlot, endSlot) => {
     const TxDetailsList = [];
     const pubKey = new solanaweb3.PublicKey(address);
 
-    // const startSlotSig = await getFirstTransactionInSlot(address, startSlot);
-    // const endSlotSig = await getFirstTransactionInSlot(address, endSlot);
-    // console.log("startSlotSig",startSlotSig);
-    // console.log("endSlotSig",endSlotSig);
-
-    // let signatures = await solanaConnection.getSignaturesForAddress(pubKey, {before: endSlotSig, until: startSlotSig});
     let signatures = await getSigsInRange(address, endSlot, startSlot);
     let signatureMapping = signatures.map((transaction) => transaction.signature);
     let transactionDetails = await solanaConnection.getParsedTransactions(signatureMapping, {maxSupportedTransactionVersion: 0, commitment: 'confirmed'});
@@ -29,13 +23,8 @@ const getTransactionsBySlot = async(address, startSlot, endSlot) => {
         const date = new Date(transaction.blockTime * 1000);
         const message = transactionDetails[i].transaction.message;
         const transactionInstructions = message.instructions;
-        const fromAddress = message.accountKeys[0].pubkey.toBase58();
-        //i temp line to check whether potential to address is being accessed
-        let toAddress;
-        toAddress = message.accountKeys[1].pubkey.toBase58();
 
         let logs = transactionDetails[i].meta.logMessages.filter(log => log.includes(searchAddress.toString()));
-        //transactionDetails[i].meta.logMessages.
 
         TxDetails.push(`Transaction No.: ${i+1}`);
         TxDetails.push(`Signature: ${transaction.signature}`);
@@ -43,15 +32,27 @@ const getTransactionsBySlot = async(address, startSlot, endSlot) => {
 
         console.log(`Transaction No.: ${i+1}`);
         console.log(`Signature: ${transaction.signature}`);
-        console.log(`From Address: ${fromAddress}`);
-        console.log(`To Address: ${toAddress}`);
         console.log(`Time: ${date}`);
         console.log(`Status: ${transaction.confirmationStatus}`);
         console.log();
 
         console.log("Instructions: ");
         transactionInstructions.forEach((instruction, n)=> {
-            console.log(`---Program Instructions ${n+1}: ${instruction.program ? instruction.program + ":" : ""} ${instruction.programId.toString()}`);
+            const parsedInstruction = instruction.parsed;
+            if (parsedInstruction && parsedInstruction.type === 'transfer') {
+                const fromAddress = parsedInstruction.info.source;
+                const toAddress = parsedInstruction.info.destination;
+                const amount = parsedInstruction.info.amount;
+
+                console.log(`Token Transfer: ${amount} tokens from ${fromAddress} to ${toAddress}`);
+            } 
+            else if (parsedInstruction && parsedInstruction.type === 'transferChecked') {
+                const fromAddress = parsedInstruction.info.source;
+                const toAddress = parsedInstruction.info.destination;
+                const amount = parsedInstruction.info.tokenAmount.uiAmount;
+
+                console.log(`Token TransferChecked: ${amount} tokens from ${fromAddress} to ${toAddress}`);
+            }
         });
         console.log();
 
@@ -79,6 +80,9 @@ const getSigsInRange = async(address, startSlot, endSlot) => {
     let beforeSignature = null;
 
     while (true) {
+        if(signatures.length == 1000) {
+            break;
+        }
         const options = {
             limit: 1000,
             before: beforeSignature
@@ -95,6 +99,15 @@ const getSigsInRange = async(address, startSlot, endSlot) => {
 
         const filteredSignatures = fetchedSignatures.filter(sig => sig.slot >= endSlot && sig.slot <= startSlot);
         signatures = signatures.concat(filteredSignatures);
+        if(signatures.length > 1000) {
+            while(true) {
+                signatures.pop(signatures.length - 1);
+                if(signatures.length == 1000) {
+                    break;
+                }
+            }
+            break;
+        }
 
         beforeSignature = fetchedSignatures[fetchedSignatures.length - 1].signature;
         
@@ -104,14 +117,6 @@ const getSigsInRange = async(address, startSlot, endSlot) => {
     }
 
     return signatures;
-    // const firstTransactionInSlot = signatures.find(sig => sig.slot === slot);
-
-    // if (!firstTransactionInSlot) {
-    //     console.log(`No transactions found in slot ${slot}`);
-    //     return;
-    // }
-
-    // return await firstTransactionInSlot.signature;
 };
 
-getTransactionsBySlot(searchAddress, 281850700, 281850800);
+let TxList = getTransactionsBySlot(searchAddress, 282520800, 282520820);
